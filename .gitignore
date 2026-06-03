@@ -1,0 +1,47 @@
+# ROS 2 / CMake build outputs
+/build/
+/install/
+/log/
+/compile_commands.json
+
+# IDE caches and editor state
+/.vscode/
+*~
+*.swp
+*.swo
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local repo metadata and workspace helpers
+/.agents/
+/.codex/
+
+# Non-source project notes and generated artifacts
+/AGENTS.md
+/BUILD.md
+/CameraTrajectory.txt
+/KeyFrameTrajectory.txt
+/image.png
+
+# Launch cache
+/launch/__pycache__/
+
+# ORB vocabulary (do not store in git)
+vocabulary/ORBvoc.txt
+vocabulary/ORBvoc.txt.tar.gz
+
+# Dataset files
+datasets/
+data/
+
+# Temporary logs
+*.log
+
+# Linux
+.DS_Store
+Thumbs.db
+
+# blog
+blog_draft.md
