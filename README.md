@@ -355,6 +355,12 @@ Defaults below follow the launch files. Use `orbslam3_realtime.launch.py` and `o
 |---|---|---|
 | `use_viewer` | `true` | Enables the ORB-SLAM3 viewer. |
 
+Notes:
+
+- The ORB-SLAM3 viewer can stay black while `tracking_state` is `Initializing`; it becomes useful after the first map is built and tracking turns `Tracking`.
+- `diagnostic_logging:=true` prints the initialization phase, waiting conditions, and state transitions.
+- `base_link -> camera_link` should come from URDF or `robot_state_publisher`; otherwise the node falls back to identity extrinsics for visualization.
+
 ### Mode Parameters
 
 | Parameter | Default | Description |

@@ -147,6 +147,10 @@ namespace orbslam3_ros {
         PublishStaticTransforms();
 
         SetupSubscriptions();
+        RCLCPP_INFO(
+            this->get_logger(),
+            "Waiting for synchronized RGB-D frames and camera_info before initialization."
+        );
         SetupDiagnostics();
         SetupMapPointsTimer();
         StartWorkerThread();
@@ -321,6 +325,9 @@ namespace orbslam3_ros {
         slam_.reset();
         slam_initialized_.store(false);
         initialization_retry_pending_.store(false);
+        camera_info_wait_logged_.store(false);
+        camera_info_ready_logged_.store(false);
+        last_tracking_state_code_.store(255);
         latest_camera_info_.reset();
         pending_initial_frame_.reset();
         frame_queue_.reset();
@@ -411,6 +418,13 @@ namespace orbslam3_ros {
 
         latest_camera_info_stamp_ns_.store(camera_info_stamp_ns);
         camera_info_total_.fetch_add(1);
+        if (!camera_info_ready_logged_.exchange(true)) {
+            RCLCPP_INFO(
+                this->get_logger(),
+                "CameraInfo received on %s; waiting for the first synchronized RGB-D frame to initialize.",
+                rgb_camera_info_topic_.c_str()
+            );
+        }
         if (diagnostic_logging_ && camera_info_total_.load() <= 3) {
             RCLCPP_INFO(
                 this->get_logger(),
@@ -465,6 +479,14 @@ namespace orbslam3_ros {
             }
 
             if (!camera_info_snapshot) {
+                if (!camera_info_wait_logged_.exchange(true)) {
+                    RCLCPP_INFO(
+                        this->get_logger(),
+                        "Received synchronized RGB-D frame %llu but camera_info on %s has not arrived yet; initialization is waiting.",
+                        static_cast<unsigned long long>(frame.sequence_id),
+                        rgb_camera_info_topic_.c_str()
+                    );
+                }
                 return;
             }
 
@@ -491,6 +513,15 @@ namespace orbslam3_ros {
         }
 
         initialization_attempt_total_.fetch_add(1);
+        RCLCPP_INFO(
+            this->get_logger(),
+            "Preparing RGB-D initialization from synchronized frame %llu | rgb=%s | depth=%s | camera_info=%ux%u",
+            static_cast<unsigned long long>(seed_frame.sequence_id),
+            FormatStamp(seed_frame.rgb_stamp).c_str(),
+            FormatStamp(seed_frame.depth_stamp).c_str(),
+            camera_info.width,
+            camera_info.height
+        );
 
         if (!ValidateCameraInfo(camera_info, *seed_frame.rgb_msg)) {
             initialization_failure_total_.fetch_add(1);
@@ -521,6 +552,10 @@ namespace orbslam3_ros {
                 camera_info.k[4],
                 camera_info.k[2],
                 camera_info.k[5]
+            );
+            RCLCPP_INFO(
+                this->get_logger(),
+                "RGB-D initialization completed; tracking output will become visible once ORB-SLAM3 enters Tracking."
             );
         } catch (const std::exception& e) {
             initialization_failure_total_.fetch_add(1);
@@ -569,6 +604,31 @@ namespace orbslam3_ros {
             const auto depth_cv = cv_bridge::toCvShare(frame.depth_msg, frame.depth_msg->encoding);
             const auto pose = slam_->Track(rgb_cv->image, depth_cv->image, ToSeconds(frame.rgb_stamp));
             const auto tracking_state = slam_->GetTrackingState();
+            const auto tracking_state_code = static_cast<std::uint8_t>(tracking_state);
+            const auto previous_tracking_state_code = last_tracking_state_code_.exchange(tracking_state_code);
+            if (previous_tracking_state_code != tracking_state_code) {
+                RCLCPP_INFO(
+                    this->get_logger(),
+                    "Tracking state changed to %s.",
+                    TrackingStateToString(tracking_state)
+                );
+                if (tracking_state == TrackingState::Initializing) {
+                    RCLCPP_INFO(
+                        this->get_logger(),
+                        "Viewer can stay black while ORB-SLAM3 is building its initial map; motion and textured scenes help it converge."
+                    );
+                } else if (tracking_state == TrackingState::Tracking) {
+                    RCLCPP_INFO(
+                        this->get_logger(),
+                        "Tracking is active; pose, path, and map outputs should now be visible."
+                    );
+                } else {
+                    RCLCPP_WARN(
+                        this->get_logger(),
+                        "Tracking lost; outputs may pause until ORB-SLAM3 relocalizes."
+                    );
+                }
+            }
             auto map_points = slam_->GetMapPointsSnapshot();
 
             PoseSnapshot snapshot;
@@ -705,6 +765,11 @@ namespace orbslam3_ros {
         const auto max_sync_delta_ns = max_sync_delta_ns_.load();
         const auto camera_info_total = camera_info_total_.load();
         const auto latest_camera_info_stamp_ns = latest_camera_info_stamp_ns_.load();
+        const std::string init_state = slam_initialized_.load()
+            ? "ready"
+            : camera_info_total == 0 ? "waiting_camera_info"
+            : synced_pairs_total_.load() == 0 ? "waiting_rgbd_frame"
+            : "initializing";
         const std::string latest_rgb_stamp_text =
             latest_rgb_stamp_ns >= 0 ? FormatStampNs(latest_rgb_stamp_ns) : std::string("n/a");
         const std::string latest_depth_stamp_text =
@@ -721,7 +786,7 @@ namespace orbslam3_ros {
 
         RCLCPP_INFO(
             this->get_logger(),
-            "RGBD stats | fps=%.2f | queue=%zu/%zu | sync_avg=%.2f ms | sync_total=%llu | sync_drop=%llu | queue_drop=%llu | dup_drop=%llu | dup_seq=%llu | dup_stamp=%llu | rgb=%s | depth=%s | sync_last=%.3f ms | sync_max=%.3f ms | camera_info=%llu | camera_info_stamp=%s | init=%s | init_attempt=%llu | init_fail=%llu",
+            "RGBD stats | fps=%.2f | queue=%zu/%zu | sync_avg=%.2f ms | sync_total=%llu | sync_drop=%llu | queue_drop=%llu | dup_drop=%llu | dup_seq=%llu | dup_stamp=%llu | rgb=%s | depth=%s | sync_last=%.3f ms | sync_max=%.3f ms | camera_info=%llu | camera_info_stamp=%s | init_state=%s | init_attempt=%llu | init_fail=%llu",
             fps,
             queue_depth,
             frame_queue_ ? frame_queue_->Capacity() : 0U,
@@ -738,7 +803,7 @@ namespace orbslam3_ros {
             ToMilliseconds(max_sync_delta_ns),
             static_cast<unsigned long long>(camera_info_total),
             latest_camera_info_stamp_text.c_str(),
-            slam_initialized_.load() ? "ready" : "waiting",
+            init_state.c_str(),
             static_cast<unsigned long long>(init_attempt_total),
             static_cast<unsigned long long>(init_failure_total)
         );

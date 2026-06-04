@@ -208,6 +208,9 @@ namespace orbslam3_ros {
         std::atomic<bool> worker_busy_{false};
         std::atomic<bool> slam_initialized_{false};
         std::atomic<bool> initialization_retry_pending_{false};
+        std::atomic<bool> camera_info_wait_logged_{false};
+        std::atomic<bool> camera_info_ready_logged_{false};
+        std::atomic<std::uint8_t> last_tracking_state_code_{255};
         std::atomic<bool> playback_complete_{false};
         std::atomic<std::uint64_t> frame_sequence_{0};
         std::uint64_t last_processed_sequence_{0};

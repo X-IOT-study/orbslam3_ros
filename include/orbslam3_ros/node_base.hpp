@@ -52,6 +52,8 @@ namespace orbslam3_ros {
 
         // Return true when the given file path exists and points to a regular file.
         [[nodiscard]] bool ValidateFilePath(const std::string& path, const char* param_name) const;
+        // Convert a tracking state enum to a short human-readable string.
+        [[nodiscard]] static const char* TrackingStateToString(TrackingState tracking_state) noexcept;
         // Convert a ROS time stamp to seconds.
         [[nodiscard]] static double ToSeconds(const builtin_interfaces::msg::Time& stamp) noexcept;
         // Convert a ROS time stamp to nanoseconds.

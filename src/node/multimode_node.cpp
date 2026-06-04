@@ -1,8 +1,11 @@
 /**
  * @file multimode_node.cpp
  * @brief Multi-mode ORB-SLAM3 ROS node implementation.
+ * @author WenSheng Xu
+ * @date 2026-06-03
+ * @version 0.1
+ * @copyright Copyright (c) 2026, WenSheng Xu. All rights reserved.
  */
-
 #include "orbslam3_ros/multimode_node.hpp"
 
 #include <algorithm>
@@ -92,6 +95,16 @@ namespace orbslam3_ros {
 
         InitializeOutputs();
         frame_queue_ = std::make_unique<FrameQueue>(std::max<std::size_t>(1, frame_queue_size_));
+        if (run_mode_ == RunMode::Realtime) {
+            if (input_mode_ == SensorMode::Rgbd && runtime_calibration_from_camera_info_) {
+                RCLCPP_INFO(
+                    this->get_logger(),
+                    "Waiting for synchronized RGB-D frames and camera_info before initialization."
+                );
+            } else {
+                RCLCPP_INFO(this->get_logger(), "Waiting for input frames before initialization.");
+            }
+        }
 
         if (run_mode_ == RunMode::Dataset) {
             if (!ValidateFilePath(association_file_, "association_file")) {
@@ -446,6 +459,9 @@ namespace orbslam3_ros {
 
         slam_initialized_.store(false);
         initialization_retry_pending_.store(false);
+        camera_info_wait_logged_.store(false);
+        camera_info_ready_logged_.store(false);
+        last_tracking_state_code_.store(255);
         pending_initial_frame_.reset();
     }
 
@@ -503,8 +519,25 @@ namespace orbslam3_ros {
                 }
 
                 if (!camera_info_snapshot) {
+                    if (!camera_info_wait_logged_.exchange(true)) {
+                        RCLCPP_INFO(
+                            this->get_logger(),
+                            "Received synchronized RGB-D frame %llu but camera_info on %s has not arrived yet; initialization is waiting.",
+                            static_cast<unsigned long long>(packet.sequence_id),
+                            rgb_camera_info_topic_.c_str()
+                        );
+                    }
                     return;
                 }
+
+                RCLCPP_INFO(
+                    this->get_logger(),
+                    "Preparing RGB-D initialization from synchronized frame %llu | stamp=%s | camera_info=%ux%u",
+                    static_cast<unsigned long long>(packet.sequence_id),
+                    FormatStamp(packet.stamp).c_str(),
+                    camera_info_snapshot->width,
+                    camera_info_snapshot->height
+                );
 
                 if (!ValidateCameraInfo(*camera_info_snapshot, *pending_initial_frame_)) {
                     return;
@@ -515,6 +548,16 @@ namespace orbslam3_ros {
                     return;
                 }
             } else {
+                const std::string mode_text =
+                    input_mode_ == SensorMode::Monocular ? "mono" :
+                    input_mode_ == SensorMode::Stereo ? "stereo" :
+                    input_mode_ == SensorMode::Rgbd ? "RGB-D" : "stereo-inertial";
+                RCLCPP_INFO(
+                    this->get_logger(),
+                    "Preparing %s initialization from synchronized frame %llu using static settings calibration.",
+                    mode_text.c_str(),
+                    static_cast<unsigned long long>(packet.sequence_id)
+                );
                 try {
                     slam_ = std::make_unique<SystemSlam>(
                         vocab_file_,
@@ -544,6 +587,10 @@ namespace orbslam3_ros {
 
             slam_initialized_.store(true);
             initialization_retry_pending_.store(false);
+            RCLCPP_INFO(
+                this->get_logger(),
+                "ORB-SLAM3 initialization completed; tracking output will become visible once ORB-SLAM3 enters Tracking."
+            );
 
             if (slam_initialized_.load()) {
                 const FramePacket seed_frame = *pending_initial_frame_;
@@ -618,6 +665,31 @@ namespace orbslam3_ros {
             }
 
             const auto tracking_state = slam_->GetTrackingState();
+            const auto tracking_state_code = static_cast<std::uint8_t>(tracking_state);
+            const auto previous_tracking_state_code = last_tracking_state_code_.exchange(tracking_state_code);
+            if (previous_tracking_state_code != tracking_state_code) {
+                RCLCPP_INFO(
+                    this->get_logger(),
+                    "Tracking state changed to %s.",
+                    TrackingStateToString(tracking_state)
+                );
+                if (tracking_state == TrackingState::Initializing) {
+                    RCLCPP_INFO(
+                        this->get_logger(),
+                        "Viewer can stay black while ORB-SLAM3 is building its initial map; motion and textured scenes help it converge."
+                    );
+                } else if (tracking_state == TrackingState::Tracking) {
+                    RCLCPP_INFO(
+                        this->get_logger(),
+                        "Tracking is active; pose, path, and map outputs should now be visible."
+                    );
+                } else {
+                    RCLCPP_WARN(
+                        this->get_logger(),
+                        "Tracking lost; outputs may pause until ORB-SLAM3 relocalizes."
+                    );
+                }
+            }
             auto map_points = slam_->GetMapPointsSnapshot();
 
             PoseSnapshot snapshot;
@@ -683,15 +755,22 @@ namespace orbslam3_ros {
         const auto processed_delta = processed_total - diagnostics_last_processed_total_;
         const double fps = elapsed > 0.0 ? static_cast<double>(processed_delta) / elapsed : 0.0;
         const std::size_t queue_depth = frame_queue_ ? frame_queue_->Size() : 0U;
+        const auto sync_pair_total = sync_pair_total_.load();
+        const auto camera_info_total = camera_info_total_.load();
         const std::string mode_text =
             input_mode_ == SensorMode::Monocular ? "mono" :
             input_mode_ == SensorMode::Stereo ? "stereo" :
             input_mode_ == SensorMode::Rgbd ? "rgbd" : "stereo_inertial";
         const std::string run_text = run_mode_ == RunMode::Dataset ? "dataset" : "realtime";
+        const std::string init_state = slam_initialized_.load()
+            ? "ready"
+            : (run_mode_ == RunMode::Realtime && input_mode_ == SensorMode::Rgbd && runtime_calibration_from_camera_info_
+                ? (camera_info_total == 0 ? "waiting_camera_info" : sync_pair_total == 0 ? "waiting_rgbd_frame" : "initializing")
+                : (sync_pair_total == 0 ? "waiting_input" : "initializing"));
 
         RCLCPP_INFO(
             this->get_logger(),
-            "mode=%s run=%s | fps=%.2f | queue=%zu/%zu | processed=%llu | dup_drop=%llu | sync_pairs=%llu | imu=%llu | init=%s",
+            "mode=%s run=%s | fps=%.2f | queue=%zu/%zu | processed=%llu | dup_drop=%llu | sync_pairs=%llu | imu=%llu | init_state=%s",
             mode_text.c_str(),
             run_text.c_str(),
             fps,
@@ -699,9 +778,9 @@ namespace orbslam3_ros {
             frame_queue_ ? frame_queue_->Capacity() : 0U,
             static_cast<unsigned long long>(processed_total),
             static_cast<unsigned long long>(dropped_duplicate_total_.load()),
-            static_cast<unsigned long long>(sync_pair_total_.load()),
+            static_cast<unsigned long long>(sync_pair_total),
             static_cast<unsigned long long>(imu_messages_total_.load()),
-            slam_initialized_.load() ? "ready" : "waiting"
+            init_state.c_str()
         );
 
         diagnostics_last_report_time_ = now;
@@ -851,6 +930,13 @@ namespace orbslam3_ros {
 
         latest_camera_info_stamp_ns_.store(ToNanoseconds(msg->header.stamp));
         camera_info_total_.fetch_add(1);
+        if (!camera_info_ready_logged_.exchange(true)) {
+            RCLCPP_INFO(
+                this->get_logger(),
+                "CameraInfo received on %s; waiting for the first synchronized RGB-D frame to initialize.",
+                rgb_camera_info_topic_.c_str()
+            );
+        }
         initialization_retry_pending_.store(true);
         worker_cv_.notify_one();
     }

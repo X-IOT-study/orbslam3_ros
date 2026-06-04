@@ -1,6 +1,10 @@
 /**
  * @file rgbd_slam.cpp
  * @brief RGB-D wrapper around the ORB-SLAM3 system API.
+ * @author WenSheng Xu
+ * @date 2026-06-03
+ * @version 0.1
+ * @copyright Copyright (c) 2026, WenSheng Xu. All rights reserved.
  */
 
 #include "orbslam3_ros/rgbd_slam.hpp"

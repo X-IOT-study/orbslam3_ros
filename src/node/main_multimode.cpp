@@ -1,8 +1,11 @@
 /**
  * @file main_multimode.cpp
  * @brief Main entry point for the multi-mode ORB-SLAM3 ROS node.
+ * @author WenSheng Xu
+ * @date 2026-06-03
+ * @version 0.1
+ * @copyright Copyright (c) 2026, WenSheng Xu. All rights reserved.
  */
-
 #include <exception>
 #include <memory>
 

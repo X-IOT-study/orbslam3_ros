@@ -355,6 +355,12 @@ ros2 launch orbslam3_ros orbslam3_rgbd.launch.py
 |---|---|---|
 | `use_viewer` | `true` | 是否启用 ORB-SLAM3 Viewer。 |
 
+说明：
+
+- 当 `tracking_state` 还是 `Initializing` 时，ORB-SLAM3 Viewer 可能会保持黑屏，这是初始建图阶段的正常现象。
+- 打开 `diagnostic_logging:=true` 后，会看到初始化等待条件、初始化尝试和状态切换日志。
+- `base_link -> camera_link` 最好由 URDF 或 `robot_state_publisher` 提供；否则节点会退回到 identity 外参并给出警告。
+
 ### 模式参数
 
 | 参数 | 默认值 | 说明 |

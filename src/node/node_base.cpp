@@ -122,6 +122,19 @@ namespace orbslam3_ros {
         return true;
     }
 
+    const char* LocalizationNodeBase::TrackingStateToString(TrackingState tracking_state) noexcept {
+        switch (tracking_state) {
+            case TrackingState::Lost:
+                return "Lost";
+            case TrackingState::Initializing:
+                return "Initializing";
+            case TrackingState::Tracking:
+                return "Tracking";
+        }
+
+        return "Unknown";
+    }
+
     double LocalizationNodeBase::ToSeconds(const builtin_interfaces::msg::Time& stamp) noexcept {
         return static_cast<double>(stamp.sec) + static_cast<double>(stamp.nanosec) * 1e-9;
     }
@@ -262,7 +275,7 @@ namespace orbslam3_ros {
             if (!camera_transform_warning_emitted_.exchange(true)) {
                 RCLCPP_WARN(
                     this->get_logger(),
-                    "Falling back to identity camera extrinsics because TF lookup from %s to %s is unavailable.",
+                    "No TF lookup from %s to %s; falling back to identity for visualization only. Publish a real extrinsic via URDF or robot_state_publisher.",
                     base_frame_.c_str(),
                     camera_frame_.c_str()
                 );

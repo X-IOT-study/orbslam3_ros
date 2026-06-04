@@ -1,6 +1,10 @@
 /**
  * @file system_slam.cpp
  * @brief Generic ORB-SLAM3 system wrapper implementation.
+ * @author WenSheng Xu
+ * @date 2026-06-03
+ * @version 0.1
+ * @copyright Copyright (c) 2026, WenSheng Xu. All rights reserved.
  */
 
 #include "orbslam3_ros/slam/system_slam.hpp"

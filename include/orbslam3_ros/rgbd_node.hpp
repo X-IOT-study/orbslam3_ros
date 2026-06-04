@@ -117,6 +117,9 @@ namespace orbslam3_ros {
         std::atomic<bool> stop_requested_{false};
         std::atomic<bool> slam_initialized_{false};
         std::atomic<bool> initialization_retry_pending_{false};
+        std::atomic<bool> camera_info_wait_logged_{false};
+        std::atomic<bool> camera_info_ready_logged_{false};
+        std::atomic<std::uint8_t> last_tracking_state_code_{255};
         rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_subscription_;
         image_transport::SubscriberFilter rgb_subscription_;
         image_transport::SubscriberFilter depth_subscription_;
