@@ -1,12 +1,21 @@
 # orbslam3_ros
 
-`orbslam3_ros` is a ROS 2 wrapper around ORB-SLAM3 for RGB-D localization and TUM-style dataset playback. It publishes pose, odometry, path, TF, tracking state, and sparse map points while keeping the ORB-SLAM3 integration in a small adapter layer.
+`orbslam3_ros` is a ROS 2 wrapper around ORB-SLAM3 for mono, stereo, RGB-D, and stereo-inertial tracking. It publishes pose, odometry, path, TF, tracking state, and sparse map points while keeping the ORB-SLAM3 integration in a small adapter layer.
 
 Chinese version: [README_zh.md](README_zh.md)
 
 <!-- Badges placeholder: CI, ROS distro, license, and build status badges go here. -->
 
-## Demo
+## Overview
+
+| Item | Details |
+|---|---|
+| Supported modes | mono, stereo, RGB-D, stereo-inertial |
+| Input sources | live sensors, TUM/EuRoC/KITTI datasets, rosbag2 |
+| Outputs | pose, odom, path, TF, sparse map points |
+| Main entry points | realtime launch, dataset launch, generic launch |
+
+## Visual Demo
 
 ### RViz
 
@@ -16,64 +25,35 @@ Chinese version: [README_zh.md](README_zh.md)
 
 ![ORB-SLAM3 Viewer screenshot](docs/images/viewer.png)
 
-### GIF
+### GIF Previews
 
-![GIF demonstration](docs/images/demo.gif)
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/images/mono_demo.gif" alt="Monocular demo" width="240"><br>
+      <strong>Monocular</strong><br>
+      Single-camera tracking preview.
+    </td>
+    <td align="center">
+      <img src="docs/images/stereo_demo.gif" alt="Stereo demo" width="240"><br>
+      <strong>Stereo</strong><br>
+      Left-right image pair tracking preview.
+    </td>
+    <td align="center">
+      <img src="docs/images/rgbd_demo.gif" alt="RGB-D demo" width="240"><br>
+      <strong>RGB-D</strong><br>
+      Color-plus-depth tracking preview.
+    </td>
+  </tr>
+</table>
 
-## Quick Start
+## Highlights
 
-1. Install the ORB-SLAM3 prerequisites, then clone and build the fork used by this workspace:
+### Included
 
-   ```bash
-   sudo apt update
-   sudo apt install -y build-essential cmake git libopencv-dev libeigen3-dev libboost-serialization-dev libglew-dev
-
-   mkdir -p ~/tools
-   cd ~/tools
-   git clone https://github.com/EndlessLoops/ORB_SLAM3 ORB_SLAM3
-   cd ORB_SLAM3
-   chmod +x build.sh
-   ./build.sh
-   ```
-
-   The checkout at `/home/dream/tools/ORB_SLAM3` points to the `EndlessLoops/ORB_SLAM3` repository.
-
-   This workspace expects the following local ORB-SLAM3-related paths:
-
-   - `ORB_SLAM3`: `/home/dream/tools/ORB_SLAM3`
-   - `Pangolin`: `/home/dream/tools/Pangolin/build/src`
-   - `Sophus`: `/home/dream/tools/ORB_SLAM3/Thirdparty/Sophus/build`
-   - `realsense2`: `/opt/ros/humble/lib/x86_64-linux-gnu/librealsense2.so.2.57`
-
-2. Clone into a ROS 2 workspace:
-
-   ```bash
-   mkdir -p ~/ros2_ws/src
-   cd ~/ros2_ws/src
-   git clone https://github.com/X-IOT-study/orbslam3_ros.git orbslam3_ros
-   ```
-
-3. Build from the workspace root:
-
-   ```bash
-   source /opt/ros/humble/setup.bash
-   cd ~/ros2_ws
-   colcon build --packages-select orbslam3_ros --cmake-args -DCMAKE_BUILD_TYPE=Release
-   source install/setup.bash
-   ```
-
-4. Launch the unified RGB-D entry point:
-
-   ```bash
-   ros2 launch orbslam3_ros orbslam3_rgbd.launch.py mode:=realtime
-   ```
-
-## Features
-
-### What It Provides
-
-- RGB-D realtime tracking
-- TUM association-file playback
+- Monocular, stereo, RGB-D, and stereo-inertial realtime tracking
+- File-sequence playback for mono/stereo/RGB-D/stereo-inertial datasets
+- Optional rosbag2 playback through the generic launch file
 - `geometry_msgs/msg/PoseStamped` pose output
 - `nav_msgs/msg/Odometry`, `nav_msgs/msg/Path`, and tracking-state output
 - `sensor_msgs/msg/PointCloud2` sparse map-point output for RViz and debugging
@@ -82,7 +62,7 @@ Chinese version: [README_zh.md](README_zh.md)
 - Launch-file driven parameter configuration
 - A small C++ adapter around ORB-SLAM3
 
-### What It Does Not Provide
+### Excluded
 
 - Dense point-cloud reconstruction
 - Occupancy or grid-map generation
@@ -93,24 +73,25 @@ Chinese version: [README_zh.md](README_zh.md)
 
 ```mermaid
 flowchart LR
-    A[RGB-D Camera] --> B[RGBDNode]
-    C[TUM Dataset Playback] --> B
-    B --> D[RGBDSlam]
-    D --> E[ORB_SLAM3::System]
-    E --> F[Pose / Path / Odom / TF / MapPoints]
+    A[Mono / Stereo / RGB-D / Stereo-Inertial Sensors] --> B[MultiModeNode]
+    C[TUM / EuRoC-style Dataset Playback] --> B
+    D[rosbag2 Playback] --> B
+    B --> E[SystemSlam]
+    E --> F[ORB_SLAM3::System]
+    F --> G[Pose / Path / Odom / TF / MapPoints]
 ```
 
 | Layer | Responsibility |
 |---|---|
-| RGB-D Camera / Dataset Playback | Supplies live RGB-D frames or association-file playback input. |
-| `RGBDNode` | Declares parameters, validates files and camera info, synchronizes RGB-D input, initializes SLAM, and manages runtime publishing. |
-| `RGBDSlam` | Adapts the ORB-SLAM3 API for RGB-D tracking and trajectory export. |
+| Sensors / Dataset Playback | Supplies live sensor frames or association-file playback input. |
+| `MultiModeNode` | Declares parameters, selects the runtime mode, initializes SLAM, and manages runtime publishing. |
+| `SystemSlam` | Adapts the ORB-SLAM3 API for mono, stereo, RGB-D, and stereo-inertial tracking. |
 | `ORB_SLAM3::System` | Runs the underlying SLAM pipeline. |
 | Output layer | Publishes pose, odometry, path, tracking state, sparse map points, and TF. |
 
-The realtime node consumes live camera topics. The dataset node follows the same output path, but reads TUM association files instead of a live camera stream.
+## Prerequisites
 
-## Tested Environment
+### Target Environment
 
 | Component | Version / requirement | Notes |
 |---|---|---|
@@ -119,8 +100,6 @@ The realtime node consumes live camera topics. The dataset node follows the same
 | OpenCV | Compatible system install | Must match the ORB-SLAM3 build. |
 | Compiler | C++17 compiler, GCC or Clang | Built with `-Wall -Wextra -Wpedantic`. |
 | ORB-SLAM3 | Local source build | Built separately and linked from a local path. |
-
-## Dependencies
 
 ### ROS Dependencies
 
@@ -160,34 +139,141 @@ The realtime node consumes live camera topics. The dataset node follows the same
 
 The vocabulary file is not distributed with this repository. Please obtain `ORBvoc.txt` from the official ORB-SLAM3 project and place it under `vocabulary/ORBvoc.txt`.
 
+## Quick Start
+
+1. Install the ORB-SLAM3 prerequisites, then clone and build the fork used by this workspace:
+
+   ```bash
+   sudo apt update
+   sudo apt install -y build-essential cmake git libopencv-dev libeigen3-dev libboost-serialization-dev libglew-dev
+
+   mkdir -p ~/tools
+   cd ~/tools
+   git clone https://github.com/EndlessLoops/ORB_SLAM3 ORB_SLAM3
+   cd ORB_SLAM3
+   chmod +x build.sh
+   ./build.sh
+   ```
+
+   The checkout should point to your local `EndlessLoops/ORB_SLAM3` fork.
+
+   This workspace expects the following ORB-SLAM3-related paths on your machine:
+
+   - `ORB_SLAM3`: `<ORB_SLAM3_ROOT>`
+   - `Pangolin`: `<PANGOLIN_BUILD_DIR>/src`
+   - `Sophus`: `<ORB_SLAM3_ROOT>/Thirdparty/Sophus/build`
+   - `realsense2`: `<ROS_HUMBLE_REALSENSE2_SO>`
+
+2. Clone into a ROS 2 workspace:
+
+   ```bash
+   mkdir -p ~/ros2_ws/src
+   cd ~/ros2_ws/src
+   git clone https://github.com/X-IOT-study/orbslam3_ros.git orbslam3_ros
+   ```
+
+3. Build from the workspace root:
+
+   ```bash
+   source /opt/ros/humble/setup.bash
+   cd ~/ros2_ws
+   colcon build --packages-select orbslam3_ros --cmake-args -DCMAKE_BUILD_TYPE=Release
+   source install/setup.bash
+   ```
+
+4. Launch the realtime or dataset entry point:
+
+   ```bash
+   ros2 launch orbslam3_ros orbslam3_realtime.launch.py
+   ```
+
 ## Usage
 
-### Realtime RGB-D
+### Realtime Modes
+
+Use `orbslam3_realtime.launch.py` for live sensors. Select the mode with `mode:=...`.
+
+Monocular:
+
+```bash
+ros2 launch orbslam3_ros orbslam3_realtime.launch.py \
+  mode:=mono \
+  image_topic:=/camera/image_raw \
+  settings_file:=/path/to/orbslam3_ros/config/mono/TUM1.yaml
+```
+
+Stereo:
+
+```bash
+ros2 launch orbslam3_ros orbslam3_realtime.launch.py \
+  mode:=stereo \
+  left_topic:=/camera/left/image_raw \
+  right_topic:=/camera/right/image_raw \
+  settings_file:=/path/to/orbslam3_ros/config/stereo/EuRoC.yaml
+```
+
+RGB-D:
 
 ```bash
 ros2 launch orbslam3_ros orbslam3_realtime.launch.py
 ```
 
-Compressed streams:
+Stereo-inertial:
 
 ```bash
-ros2 launch orbslam3_ros orbslam3_realtime.launch.py image_transport:=compressed depth_transport:=compressedDepth
+ros2 launch orbslam3_ros orbslam3_realtime.launch.py \
+  mode:=stereo_inertial \
+  left_topic:=/camera/left/image_raw \
+  right_topic:=/camera/right/image_raw \
+  imu_topic:=/camera/imu \
+  settings_file:=/path/to/orbslam3_ros/config/stereo_inertial/EuRoC.yaml
+```
+
+Common realtime options:
+
+```bash
+ros2 launch orbslam3_ros orbslam3_realtime.launch.py \
+  image_transport:=compressed \
+  depth_transport:=compressedDepth \
+  runtime_calibration_from_camera_info:=true
 ```
 
 ### Dataset Playback
 
+Use `orbslam3_dataset.launch.py` with a dataset family and the sequence root. The launch file auto-selects the matching settings template and generates the intermediate playback files when needed.
+
+| Dataset family | Mode | One-liner |
+|---|---|---|
+| TUM | `rgbd` | `ros2 launch orbslam3_ros orbslam3_dataset.launch.py dataset_family:=tum dataset_root:=/home/dream/Datasets/TUM/rgbd_dataset_freiburg1_desk mode:=rgbd` |
+| EuRoC | `mono` | `ros2 launch orbslam3_ros orbslam3_dataset.launch.py dataset_family:=euroc dataset_root:=/home/dream/Datasets/EuRoC/MH_01_easy mode:=mono` |
+| KITTI | `stereo` | `ros2 launch orbslam3_ros orbslam3_dataset.launch.py dataset_family:=kitti dataset_root:=/path/to/sequences/00 mode:=stereo` |
+
+Auto-detection also works when `dataset_family` is omitted, as long as `dataset_root` points at the sequence directory.
+
+The launch file still accepts `association_file` and `imu_file` as expert overrides for custom layouts.
+TUM RGB-D can use an existing `associations.txt`, or auto-generate one from `rgb.txt` and `depth.txt` when needed.
+
+### Rosbag Playback
+
+Use the generic launch file with `dataset_source:=bag`, `run_mode:=realtime`, and `bag_path:=/path/to/bag`:
+
 ```bash
-ros2 launch orbslam3_ros orbslam3_dataset.launch.py association_file:=/path/to/associations.txt
+ros2 launch orbslam3_ros orbslam3.launch.py \
+  dataset_source:=bag \
+  run_mode:=realtime \
+  mode:=rgbd \
+  bag_path:=/path/to/bag
 ```
 
-### Unified Launch Entry
+### Compatibility Alias
+
+The legacy `orbslam3_rgbd.launch.py` remains as a compatibility alias for the realtime RGB-D default:
 
 ```bash
-ros2 launch orbslam3_ros orbslam3_rgbd.launch.py mode:=realtime
-ros2 launch orbslam3_ros orbslam3_rgbd.launch.py mode:=dataset association_file:=/path/to/associations.txt
+ros2 launch orbslam3_ros orbslam3_rgbd.launch.py
 ```
 
-## ROS Interfaces
+## Interfaces
 
 ### Topics
 
@@ -209,18 +295,20 @@ ros2 launch orbslam3_ros orbslam3_rgbd.launch.py mode:=dataset association_file:
 
 ### Trajectory Files
 
-Dataset playback saves `CameraTrajectory.txt` and `KeyFrameTrajectory.txt` in the directory that contains the association file.
+Dataset playback saves `CameraTrajectory.txt` and `KeyFrameTrajectory.txt` in `dataset_root`; if you only provide `association_file`, they are saved in that file's directory.
 
 ## Parameters
 
-Defaults below follow the launch files.
+Defaults below follow the launch files. Use `orbslam3_realtime.launch.py` and `orbslam3_dataset.launch.py` for the common cases; use `orbslam3.launch.py` when you want to mix and match mode, run mode, and data source directly.
 
 ### Input Parameters
 
 | Parameter | Default | Description |
 |---|---|---|
 | `vocab_file` | `share/orbslam3_ros/vocabulary/ORBvoc.txt` | ORB vocabulary file. |
-| `settings_file` | `share/orbslam3_ros/config/astra_pro.yaml` or `share/orbslam3_ros/config/TUM1.yaml` | ORB-SLAM3 settings file. Realtime and dataset launch files use different defaults. |
+| `settings_file` | Auto-selects the matching `share/orbslam3_ros/config/<family>/<mode>/...` file when omitted | ORB-SLAM3 settings file. Override it when you want a custom calibration or non-default dataset. |
+| `dataset_family` | `auto` | Dataset family used by the offline launcher. Auto-detects from `dataset_root` when possible. |
+| `dataset_root` | empty | Sequence root directory used for dataset auto-detection, settings selection, and trajectory output. |
 | `rgb_topic` | `/camera/color/image_raw` | RGB image base topic. |
 | `depth_topic` | `/camera/depth/image_raw` | Depth image base topic. |
 | `rgb_camera_info_topic` | `/camera/color/camera_info` | RGB camera info topic. |
@@ -267,16 +355,19 @@ Defaults below follow the launch files.
 |---|---|---|
 | `use_viewer` | `true` | Enables the ORB-SLAM3 viewer. |
 
-### Dataset Parameters
+### Mode Parameters
 
 | Parameter | Default | Description |
 |---|---|---|
-| `mode` | `realtime` | Selects the unified launch entry point mode. |
-| `association_file` | empty | TUM association file used in dataset mode. |
+| `mode` | `rgbd` | Selects mono, stereo, rgbd, or stereo_inertial. |
+| `run_mode` | `realtime` | Chooses live subscriptions or file-sequence playback. |
+| `dataset_source` | `sequence` | Set to `bag` to play a rosbag alongside the live node. |
+| `association_file` | empty | Expert override for the dataset sequence file used in playback mode. |
+| `imu_file` | empty | Expert override for the IMU file used by stereo-inertial dataset playback. |
 | `loop` | `false` | Replays the dataset in a loop. |
 | `playback_rate` | `1.0` | Playback speed multiplier applied to dataset timestamps. |
 
-## Repository Layout
+## Project Layout
 
 ```text
 orbslam3_ros/
@@ -287,18 +378,26 @@ orbslam3_ros/
 ├── config/
 │   ├── TUM1.yaml
 │   └── astra_pro.yaml
+│   ├── mono/
+│   ├── rgbd/
+│   ├── stereo/
+│   └── stereo_inertial/
 ├── include/
 │   ├── ORB_SLAM3/System.h
 │   └── orbslam3_ros/
 │       ├── node_base.hpp
+│       ├── multimode_node.hpp
 │       ├── pose_snapshot.hpp
 │       ├── publishers.hpp
+│       ├── slam/
+│       │   └── system_slam.hpp
 │       ├── rgbd_dataset_node.hpp
 │       ├── rgbd_node.hpp
 │       ├── rgbd_slam.hpp
 │       ├── spsc_ring_buffer.hpp
 │       └── tum_dataset_loader.hpp
 ├── launch/
+│   ├── orbslam3.launch.py
 │   ├── orbslam3_dataset.launch.py
 │   ├── orbslam3_realtime.launch.py
 │   └── orbslam3_rgbd.launch.py
@@ -308,12 +407,15 @@ orbslam3_ros/
 │   ├── node/
 │   │   ├── main.cpp
 │   │   ├── main_dataset.cpp
+│   │   ├── main_multimode.cpp
+│   │   ├── multimode_node.cpp
 │   │   ├── node_base.cpp
 │   │   ├── publishers.cpp
 │   │   ├── rgbd_dataset_node.cpp
 │   │   └── rgbd_node.cpp
 │   └── slam/
-│       └── rgbd_slam.cpp
+│       ├── rgbd_slam.cpp
+│       └── system_slam.cpp
 └── vocabulary/
 ```
 

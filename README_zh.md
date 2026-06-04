@@ -1,12 +1,21 @@
 # orbslam3_ros
 
-`orbslam3_ros` 是一个用于 RGB-D 定位和 TUM 风格数据集回放的 ROS 2 ORB-SLAM3 封装包。它发布位姿、里程计、路径、TF、tracking state 和稀疏地图点，并将 ORB-SLAM3 集成保持在一个较小的适配层中。
+`orbslam3_ros` 是一个用于 mono、stereo、RGB-D 和 stereo-inertial 定位的 ROS 2 ORB-SLAM3 封装包。它发布位姿、里程计、路径、TF、tracking state 和稀疏地图点，并将 ORB-SLAM3 集成保持在一个较小的适配层中。
 
 English version: [README.md](README.md)
 
 <!-- 占位：CI、ROS 发行版、许可证和构建状态徽章可放在这里。 -->
 
-## 演示
+## 总览
+
+| 项目 | 说明 |
+|---|---|
+| 支持模式 | mono、stereo、RGB-D、stereo-inertial |
+| 输入来源 | 实时传感器、TUM/EuRoC/KITTI 数据集、rosbag2 |
+| 输出内容 | 位姿、里程计、路径、TF、稀疏地图点 |
+| 主要入口 | realtime launch、dataset launch、通用 launch |
+
+## 视觉展示
 
 ### RViz
 
@@ -16,64 +25,35 @@ English version: [README.md](README.md)
 
 ![ORB-SLAM3 Viewer 截图](docs/images/viewer.png)
 
-### GIF
+### GIF 预演
 
-![GIF 演示](docs/images/demo.gif)
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/images/mono_demo.gif" alt="单目演示" width="240"><br>
+      <strong>单目</strong><br>
+      单相机跟踪预演。
+    </td>
+    <td align="center">
+      <img src="docs/images/stereo_demo.gif" alt="双目演示" width="240"><br>
+      <strong>双目</strong><br>
+      左右图像对跟踪预演。
+    </td>
+    <td align="center">
+      <img src="docs/images/rgbd_demo.gif" alt="RGB-D 演示" width="240"><br>
+      <strong>RGB-D</strong><br>
+      颜色 + 深度跟踪预演。
+    </td>
+  </tr>
+</table>
 
-## 快速开始
+## 亮点
 
-1. 安装 ORB-SLAM3 先决条件，然后克隆并编译本工作区使用的 fork：
+### 包含内容
 
-   ```bash
-   sudo apt update
-   sudo apt install -y build-essential cmake git libopencv-dev libeigen3-dev libboost-serialization-dev libglew-dev
-
-   mkdir -p ~/tools
-   cd ~/tools
-   git clone https://github.com/EndlessLoops/ORB_SLAM3 ORB_SLAM3
-   cd ORB_SLAM3
-   chmod +x build.sh
-   ./build.sh
-   ```
-
-   `/home/dream/tools/ORB_SLAM3` 这个目录对应的是 `EndlessLoops/ORB_SLAM3` 仓库。
-
-   本工作区当前预期使用的本地 ORB-SLAM3 相关路径如下：
-
-   - `ORB_SLAM3`: `/home/dream/tools/ORB_SLAM3`
-   - `Pangolin`: `/home/dream/tools/Pangolin/build/src`
-   - `Sophus`: `/home/dream/tools/ORB_SLAM3/Thirdparty/Sophus/build`
-   - `realsense2`: `/opt/ros/humble/lib/x86_64-linux-gnu/librealsense2.so.2.57`
-
-2. 克隆到 ROS 2 工作空间：
-
-   ```bash
-   mkdir -p ~/ros2_ws/src
-   cd ~/ros2_ws/src
-   git clone https://github.com/X-IOT-study/orbslam3_ros.git orbslam3_ros
-   ```
-
-3. 在工作空间根目录编译：
-
-   ```bash
-   source /opt/ros/humble/setup.bash
-   cd ~/ros2_ws
-   colcon build --packages-select orbslam3_ros --cmake-args -DCMAKE_BUILD_TYPE=Release
-   source install/setup.bash
-   ```
-
-4. 启动统一 RGB-D 入口：
-
-   ```bash
-   ros2 launch orbslam3_ros orbslam3_rgbd.launch.py mode:=realtime
-   ```
-
-## 功能
-
-### 提供什么
-
-- RGB-D 实时跟踪
-- TUM association 文件回放
+- mono / stereo / RGB-D / stereo-inertial 实时跟踪
+- mono / stereo / RGB-D / stereo-inertial 文件序列回放
+- 通过通用 launch 支持 rosbag2 回放
 - `geometry_msgs/msg/PoseStamped` 位姿输出
 - `nav_msgs/msg/Odometry`、`nav_msgs/msg/Path` 和 tracking state 输出
 - `sensor_msgs/msg/PointCloud2` 稀疏地图点输出，用于 RViz 和调试
@@ -82,7 +62,7 @@ English version: [README.md](README.md)
 - 通过 launch 文件进行参数配置
 - 一层轻量的 ORB-SLAM3 C++ 适配器
 
-### 不提供什么
+### 不包含内容
 
 - 稠密点云重建
 - 占据栅格或栅格地图生成
@@ -93,24 +73,25 @@ English version: [README.md](README.md)
 
 ```mermaid
 flowchart LR
-    A[RGB-D Camera] --> B[RGBDNode]
-    C[TUM Dataset Playback] --> B
-    B --> D[RGBDSlam]
-    D --> E[ORB_SLAM3::System]
-    E --> F[Pose / Path / Odom / TF / MapPoints]
+    A[Mono / Stereo / RGB-D / Stereo-Inertial 传感器] --> B[MultiModeNode]
+    C[TUM / EuRoC 风格数据集] --> B
+    D[rosbag2 回放] --> B
+    B --> E[SystemSlam]
+    E --> F[ORB_SLAM3::System]
+    F --> G[Pose / Path / Odom / TF / MapPoints]
 ```
 
 | 层级 | 职责 |
 |---|---|
-| RGB-D Camera / Dataset Playback | 提供实时 RGB-D 帧或 association 文件回放输入。 |
-| `RGBDNode` | 声明参数、校验文件和相机信息、同步 RGB-D 输入、初始化 SLAM，并管理运行时发布。 |
-| `RGBDSlam` | 封装 ORB-SLAM3 API，用于 RGB-D 跟踪和轨迹导出。 |
+| 传感器 / 数据集回放 | 提供实时传感器帧或 association 文件回放输入。 |
+| `MultiModeNode` | 声明参数、选择运行模式、初始化 SLAM，并管理运行时发布。 |
+| `SystemSlam` | 封装 ORB-SLAM3 API，用于 mono、stereo、RGB-D 和 stereo-inertial 跟踪。 |
 | `ORB_SLAM3::System` | 运行底层 SLAM 流程。 |
 | 输出层 | 发布位姿、里程计、路径、tracking state、稀疏地图点和 TF。 |
 
-实时节点消费的是在线相机话题。数据集节点走同一套输出路径，但读取的是 TUM association 文件，而不是实时相机流。
+## 先决条件
 
-## 测试环境
+### 目标环境
 
 | 组件 | 版本 / 要求 | 说明 |
 |---|---|---|
@@ -119,8 +100,6 @@ flowchart LR
 | OpenCV | 系统已安装且兼容 | 需要与 ORB-SLAM3 的构建保持一致。 |
 | 编译器 | C++17 编译器，GCC 或 Clang | 使用 `-Wall -Wextra -Wpedantic` 编译。 |
 | ORB-SLAM3 | 本地源码构建 | 需要单独构建，并从本地路径链接。 |
-
-## 依赖
 
 ### ROS 依赖
 
@@ -160,34 +139,141 @@ flowchart LR
 
 词典文件不随本仓库发布。请从官方 ORB-SLAM3 项目获取 `ORBvoc.txt`，并将其放到 `vocabulary/ORBvoc.txt`。
 
+## 快速开始
+
+1. 安装 ORB-SLAM3 先决条件，然后克隆并编译本工作区使用的 fork：
+
+   ```bash
+   sudo apt update
+   sudo apt install -y build-essential cmake git libopencv-dev libeigen3-dev libboost-serialization-dev libglew-dev
+
+   mkdir -p ~/tools
+   cd ~/tools
+   git clone https://github.com/EndlessLoops/ORB_SLAM3 ORB_SLAM3
+   cd ORB_SLAM3
+   chmod +x build.sh
+   ./build.sh
+   ```
+
+   这个 checkout 应该指向你本机的 `EndlessLoops/ORB_SLAM3` fork。
+
+   本工作区预期使用的 ORB-SLAM3 相关路径如下，请按你的机器实际位置替换：
+
+   - `ORB_SLAM3`: `<ORB_SLAM3_ROOT>`
+   - `Pangolin`: `<PANGOLIN_BUILD_DIR>/src`
+   - `Sophus`: `<ORB_SLAM3_ROOT>/Thirdparty/Sophus/build`
+   - `realsense2`: `<ROS_HUMBLE_REALSENSE2_SO>`
+
+2. 克隆到 ROS 2 工作空间：
+
+   ```bash
+   mkdir -p ~/ros2_ws/src
+   cd ~/ros2_ws/src
+   git clone https://github.com/X-IOT-study/orbslam3_ros.git orbslam3_ros
+   ```
+
+3. 在工作空间根目录编译：
+
+   ```bash
+   source /opt/ros/humble/setup.bash
+   cd ~/ros2_ws
+   colcon build --packages-select orbslam3_ros --cmake-args -DCMAKE_BUILD_TYPE=Release
+   source install/setup.bash
+   ```
+
+4. 启动实时或数据集入口：
+
+   ```bash
+   ros2 launch orbslam3_ros orbslam3_realtime.launch.py
+   ```
+
 ## 使用
 
-### 实时 RGB-D
+### 实时模式
+
+实时传感器请使用 `orbslam3_realtime.launch.py`，并通过 `mode:=...` 选择模式。
+
+单目：
+
+```bash
+ros2 launch orbslam3_ros orbslam3_realtime.launch.py \
+  mode:=mono \
+  image_topic:=/camera/image_raw \
+  settings_file:=/path/to/orbslam3_ros/config/mono/TUM1.yaml
+```
+
+双目：
+
+```bash
+ros2 launch orbslam3_ros orbslam3_realtime.launch.py \
+  mode:=stereo \
+  left_topic:=/camera/left/image_raw \
+  right_topic:=/camera/right/image_raw \
+  settings_file:=/path/to/orbslam3_ros/config/stereo/EuRoC.yaml
+```
+
+RGB-D：
 
 ```bash
 ros2 launch orbslam3_ros orbslam3_realtime.launch.py
 ```
 
-压缩流：
+Stereo-inertial：
 
 ```bash
-ros2 launch orbslam3_ros orbslam3_realtime.launch.py image_transport:=compressed depth_transport:=compressedDepth
+ros2 launch orbslam3_ros orbslam3_realtime.launch.py \
+  mode:=stereo_inertial \
+  left_topic:=/camera/left/image_raw \
+  right_topic:=/camera/right/image_raw \
+  imu_topic:=/camera/imu \
+  settings_file:=/path/to/orbslam3_ros/config/stereo_inertial/EuRoC.yaml
+```
+
+通用实时参数示例：
+
+```bash
+ros2 launch orbslam3_ros orbslam3_realtime.launch.py \
+  image_transport:=compressed \
+  depth_transport:=compressedDepth \
+  runtime_calibration_from_camera_info:=true
 ```
 
 ### 数据集回放
 
+使用 `orbslam3_dataset.launch.py` 时，优先提供数据集家族和序列根目录。launch 会自动选择匹配的 settings，并在需要时生成中间回放文件。
+
+| 数据集家族 | 模式 | 一条命令 |
+|---|---|---|
+| TUM | `rgbd` | `ros2 launch orbslam3_ros orbslam3_dataset.launch.py dataset_family:=tum dataset_root:=/home/dream/Datasets/TUM/rgbd_dataset_freiburg1_desk mode:=rgbd` |
+| EuRoC | `mono` | `ros2 launch orbslam3_ros orbslam3_dataset.launch.py dataset_family:=euroc dataset_root:=/home/dream/Datasets/EuRoC/MH_01_easy mode:=mono` |
+| KITTI | `stereo` | `ros2 launch orbslam3_ros orbslam3_dataset.launch.py dataset_family:=kitti dataset_root:=/path/to/sequences/00 mode:=stereo` |
+
+如果省略 `dataset_family`，launch 会在 `dataset_root` 指向序列目录时自动识别。
+
+`association_file` 和 `imu_file` 仍保留为高级覆盖参数，方便自定义目录布局。
+TUM RGB-D 既支持直接使用 `associations.txt`，也会在只有 `rgb.txt` 和 `depth.txt` 时自动生成配对文件。
+
+### Rosbag 回放
+
+使用通用 launch，并设置 `dataset_source:=bag`、`run_mode:=realtime` 和 `bag_path:=/path/to/bag`：
+
 ```bash
-ros2 launch orbslam3_ros orbslam3_dataset.launch.py association_file:=/path/to/associations.txt
+ros2 launch orbslam3_ros orbslam3.launch.py \
+  dataset_source:=bag \
+  run_mode:=realtime \
+  mode:=rgbd \
+  bag_path:=/path/to/bag
 ```
 
-### 统一启动入口
+### 兼容别名
+
+旧的 `orbslam3_rgbd.launch.py` 仍保留为 realtime RGB-D 的兼容别名：
 
 ```bash
-ros2 launch orbslam3_ros orbslam3_rgbd.launch.py mode:=realtime
-ros2 launch orbslam3_ros orbslam3_rgbd.launch.py mode:=dataset association_file:=/path/to/associations.txt
+ros2 launch orbslam3_ros orbslam3_rgbd.launch.py
 ```
 
-## ROS 接口
+## 接口
 
 ### 话题
 
@@ -209,18 +295,20 @@ ros2 launch orbslam3_ros orbslam3_rgbd.launch.py mode:=dataset association_file:
 
 ### 轨迹文件
 
-数据集回放结束后，会把 `CameraTrajectory.txt` 和 `KeyFrameTrajectory.txt` 保存到 association 文件所在目录。
+数据集回放结束后，会把 `CameraTrajectory.txt` 和 `KeyFrameTrajectory.txt` 保存到 `dataset_root`；如果只提供了 `association_file`，则保存到该文件所在目录。
 
 ## 参数
 
-下面的默认值与 launch 文件保持一致。
+下面的默认值与 launch 文件保持一致。常用场景建议直接用 `orbslam3_realtime.launch.py` 和 `orbslam3_dataset.launch.py`；需要混搭 mode / run_mode / 数据源时再使用通用 launch。
 
 ### 输入参数
 
 | 参数 | 默认值 | 说明 |
 |---|---|---|
 | `vocab_file` | `share/orbslam3_ros/vocabulary/ORBvoc.txt` | ORB 词典文件。 |
-| `settings_file` | `share/orbslam3_ros/config/astra_pro.yaml` 或 `share/orbslam3_ros/config/TUM1.yaml` | ORB-SLAM3 配置文件。实时和数据集 launch 使用不同默认值。 |
+| `settings_file` | 省略时会自动选择与 `dataset_family` 和 `mode` 匹配的 `share/orbslam3_ros/config/<family>/<mode>/...` 文件 | ORB-SLAM3 配置文件。需要自定义标定或非默认数据集时再覆盖。 |
+| `dataset_family` | `auto` | 离线 launch 使用的数据集家族；可从 `dataset_root` 自动识别。 |
+| `dataset_root` | 为空 | 序列根目录，用于自动识别数据集、选择 settings，并作为轨迹输出目录。 |
 | `rgb_topic` | `/camera/color/image_raw` | RGB 图像基础话题。 |
 | `depth_topic` | `/camera/depth/image_raw` | 深度图像基础话题。 |
 | `rgb_camera_info_topic` | `/camera/color/camera_info` | RGB 相机信息话题。 |
@@ -267,16 +355,19 @@ ros2 launch orbslam3_ros orbslam3_rgbd.launch.py mode:=dataset association_file:
 |---|---|---|
 | `use_viewer` | `true` | 是否启用 ORB-SLAM3 Viewer。 |
 
-### 数据集参数
+### 模式参数
 
 | 参数 | 默认值 | 说明 |
 |---|---|---|
-| `mode` | `realtime` | 统一启动入口的模式选择。 |
-| `association_file` | 为空 | 数据集模式使用的 TUM association 文件。 |
+| `mode` | `rgbd` | 选择 mono、stereo、rgbd 或 stereo_inertial。 |
+| `run_mode` | `realtime` | 选择实时订阅或文件序列回放。 |
+| `dataset_source` | `sequence` | 设为 `bag` 时，通用 launch 会同时启动 rosbag2。 |
+| `association_file` | 为空 | 回放模式使用的序列文件覆盖项。 |
+| `imu_file` | 为空 | stereo-inertial 数据集回放使用的 IMU 文件覆盖项。 |
 | `loop` | `false` | 是否循环回放数据集。 |
 | `playback_rate` | `1.0` | 作用于数据集时间戳的回放速度倍率。 |
 
-## 仓库结构
+## 项目结构
 
 ```text
 orbslam3_ros/
@@ -287,18 +378,26 @@ orbslam3_ros/
 ├── config/
 │   ├── TUM1.yaml
 │   └── astra_pro.yaml
+│   ├── mono/
+│   ├── rgbd/
+│   ├── stereo/
+│   └── stereo_inertial/
 ├── include/
 │   ├── ORB_SLAM3/System.h
 │   └── orbslam3_ros/
 │       ├── node_base.hpp
+│       ├── multimode_node.hpp
 │       ├── pose_snapshot.hpp
 │       ├── publishers.hpp
+│       ├── slam/
+│       │   └── system_slam.hpp
 │       ├── rgbd_dataset_node.hpp
 │       ├── rgbd_node.hpp
 │       ├── rgbd_slam.hpp
 │       ├── spsc_ring_buffer.hpp
 │       └── tum_dataset_loader.hpp
 ├── launch/
+│   ├── orbslam3.launch.py
 │   ├── orbslam3_dataset.launch.py
 │   ├── orbslam3_realtime.launch.py
 │   └── orbslam3_rgbd.launch.py
@@ -308,12 +407,15 @@ orbslam3_ros/
 │   ├── node/
 │   │   ├── main.cpp
 │   │   ├── main_dataset.cpp
+│   │   ├── main_multimode.cpp
+│   │   ├── multimode_node.cpp
 │   │   ├── node_base.cpp
 │   │   ├── publishers.cpp
 │   │   ├── rgbd_dataset_node.cpp
 │   │   └── rgbd_node.cpp
 │   └── slam/
-│       └── rgbd_slam.cpp
+│       ├── rgbd_slam.cpp
+│       └── system_slam.cpp
 └── vocabulary/
 ```
 
