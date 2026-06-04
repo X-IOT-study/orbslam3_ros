@@ -149,7 +149,7 @@ The vocabulary file is not distributed with this repository. Please obtain `ORBv
 
    mkdir -p ~/tools
    cd ~/tools
-   git clone https://github.com/EndlessLoops/ORB_SLAM3 ORB_SLAM3
+   git clone https://github.com/X-IOT-study/ORB_SLAM3.git ORB_SLAM3
    cd ORB_SLAM3
    chmod +x build.sh
    ./build.sh
