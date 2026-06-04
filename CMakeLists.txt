@@ -190,6 +190,20 @@ add_executable(${PROJECT_NAME}_realtime_node
 
 orbslam3_ros_link_target(${PROJECT_NAME}_realtime_node)
 
+set(ORB_SLAM3_ROS_MULTIMODE_NODE_SOURCES
+  src/node/node_base.cpp
+  src/node/main_multimode.cpp
+  src/node/multimode_node.cpp
+  src/node/publishers.cpp
+  src/slam/system_slam.cpp
+)
+
+add_executable(${PROJECT_NAME}_multimode_node
+  ${ORB_SLAM3_ROS_MULTIMODE_NODE_SOURCES}
+)
+
+orbslam3_ros_link_target(${PROJECT_NAME}_multimode_node)
+
 set(ORB_SLAM3_ROS_DATASET_NODE_SOURCES
   src/node/node_base.cpp
   src/node/main_dataset.cpp
@@ -208,6 +222,7 @@ orbslam3_ros_link_target(${PROJECT_NAME}_dataset_node)
 install(TARGETS
   ${PROJECT_NAME}_realtime_node
   ${PROJECT_NAME}_dataset_node
+  ${PROJECT_NAME}_multimode_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

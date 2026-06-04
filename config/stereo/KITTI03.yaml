@@ -1,0 +1,34 @@
+%YAML:1.0
+
+File.version: "1.0"
+
+Camera.type: "Rectified"
+
+Camera1.fx: 721.5377
+Camera1.fy: 721.5377
+Camera1.cx: 609.5593
+Camera1.cy: 172.854
+
+Camera.width: 1241
+Camera.height: 376
+Camera.fps: 10
+Stereo.b: 0.53716
+Camera.RGB: 1
+Stereo.ThDepth: 35.0
+
+ORBextractor.nFeatures: 2000
+ORBextractor.scaleFactor: 1.2
+ORBextractor.nLevels: 8
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+Viewer.KeyFrameSize: 0.6
+Viewer.KeyFrameLineWidth: 2.0
+Viewer.GraphLineWidth: 1.0
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.7
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -100
+Viewer.ViewpointZ: -0.1
+Viewer.ViewpointF: 2000.0
