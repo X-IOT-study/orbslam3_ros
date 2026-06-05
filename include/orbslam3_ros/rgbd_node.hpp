@@ -102,8 +102,8 @@ namespace orbslam3_ros {
         [[nodiscard]] static bool IsRgbEncoding(const std::string& encoding) noexcept;
         [[nodiscard]] static std::string FormatDouble(double value);
 
-        std::string rgb_topic_{"rgb/image_raw"};
-        std::string depth_topic_{"depth/image_raw"};
+        std::string rgb_topic_{"/camera/color/image_raw"};
+        std::string depth_topic_{"/camera/depth/image_raw"};
         std::string rgb_camera_info_topic_{"/camera/color/camera_info"};
         double stats_hz_{1.0};
         double map_points_rate_{30.0};

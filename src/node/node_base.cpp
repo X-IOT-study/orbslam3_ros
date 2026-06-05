@@ -198,7 +198,20 @@ namespace orbslam3_ros {
         const Eigen::Isometry3f camera_to_base = base_to_camera
             ? base_to_camera->inverse()
             : Eigen::Isometry3f::Identity();
-        const Eigen::Isometry3f world_camera = ToIsometry(ToPoseMessage(camera_pose_world));
+
+        // ORB-SLAM3 pose output is in the camera optical frame
+        // (x right, y down, z forward). Convert it to the ROS camera frame
+        // (x forward, y left, z up) before applying the base_link extrinsic.
+        const Eigen::Quaternionf optical_frame_rotation(
+            static_cast<float>(MakeOpticalQuaternion().w),
+            static_cast<float>(MakeOpticalQuaternion().x),
+            static_cast<float>(MakeOpticalQuaternion().y),
+            static_cast<float>(MakeOpticalQuaternion().z)
+        );
+        Eigen::Isometry3f optical_to_camera = Eigen::Isometry3f::Identity();
+        optical_to_camera.linear() = optical_frame_rotation.conjugate().toRotationMatrix();
+
+        const Eigen::Isometry3f world_camera = ToIsometry(ToPoseMessage(camera_pose_world)) * optical_to_camera;
         const Eigen::Isometry3f world_base = world_camera * camera_to_base;
         snapshot.pose = ToPoseMessage(world_base);
         return snapshot;

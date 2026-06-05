@@ -25,7 +25,7 @@ def _resolve_settings_file(context):
     elif mode in ("stereo_inertial", "stereoimu"):
         relative_path = Path("config/stereo_inertial/EuRoC.yaml")
     else:
-        relative_path = Path("config/rgbd/TUM1.yaml")
+        relative_path = Path("config/rgbd/astra_pro.yaml")
 
     return str(package_share / relative_path)
 
