@@ -10,6 +10,7 @@ This directory provides utility scripts for camera configuration generation and 
 
 - **generate_camera_config.py** - Generate an ORB-SLAM3 RGB-D configuration from ROS 2 `camera_info` topics
 - **verify_camera_config.py** - Inspect a depth image stream and suggest `RGBD.DepthMapFactor`
+- **generate_frame_chain_figure.py** - Generate the coordinate-chain figure used in the README
 
 ### Documentation / 文档
 

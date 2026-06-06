@@ -293,6 +293,41 @@ ros2 launch orbslam3_ros orbslam3_rgbd.launch.py
 - `camera_frame -> camera_optical_frame` is published when `publish_static_optical_tf:=true`.
 - The robot-to-camera transform is expected from URDF and `robot_state_publisher`.
 
+### Coordinate Alignment
+
+![ORB-SLAM3 ROS frame chain](docs/images/orbslam3_frame_chain.png)
+
+- ORB-SLAM3 returns the tracked camera pose (`Tcw`), and `orbslam3_ros` inverts it before publishing the pose.
+- `map_points` are published in `map_frame`, so the sparse cloud belongs to the world frame, not to `base_link` or `camera_link`.
+- `base_link` follows the ROS body convention (`x` forward, `y` left, `z` up).
+- `camera_optical_frame` follows the camera convention (`z` forward, `x` right, `y` down), which is why forward motion can show up on `z` when the camera extrinsic is missing.
+
+Minimal URDF for a connection test:
+
+```xml
+<robot name="orbslam3_camera_test">
+  <link name="base_link" />
+  <link name="camera_link" />
+
+  <joint name="base_link_to_camera_link" type="fixed">
+    <parent link="base_link" />
+    <child link="camera_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+
+  <!-- Keep this only if your camera driver does not already publish the optical frame. -->
+  <link name="camera_optical_frame" />
+  <joint name="camera_link_to_optical_frame" type="fixed">
+    <parent link="camera_link" />
+    <child link="camera_optical_frame" />
+    <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679" />
+  </joint>
+</robot>
+```
+
+- For a pure connection test, the zero transform is enough to verify that TF lookup works.
+- For real motion interpretation, replace the zero origin with the real camera mounting extrinsic.
+
 ### Trajectory Files
 
 Dataset playback saves `CameraTrajectory.txt` and `KeyFrameTrajectory.txt` in `dataset_root`; if you only provide `association_file`, they are saved in that file's directory.

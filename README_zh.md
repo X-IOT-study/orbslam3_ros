@@ -293,6 +293,41 @@ ros2 launch orbslam3_ros orbslam3_rgbd.launch.py
 - 当 `publish_static_optical_tf:=true` 时，发布 `camera_frame -> camera_optical_frame`。
 - 机器人到相机的外参应由 URDF 和 `robot_state_publisher` 提供。
 
+### 坐标对齐
+
+![ORB-SLAM3 ROS 坐标链](docs/images/orbslam3_frame_chain.png)
+
+- ORB-SLAM3 返回的是相机跟踪位姿 `Tcw`，`orbslam3_ros` 会先取逆，再发布位姿。
+- `map_points` 发布在 `map_frame` 中，所以稀疏点云属于世界坐标系，而不是 `base_link` 或 `camera_link`。
+- `base_link` 采用 ROS 机体坐标系约定：`x` 向前、`y` 向左、`z` 向上。
+- `camera_optical_frame` 采用相机坐标系约定：`z` 向前、`x` 向右、`y` 向下；因此当外参缺失时，相机前进会看起来像 `z` 在增长。
+
+用于连接测试的最小 URDF：
+
+```xml
+<robot name="orbslam3_camera_test">
+  <link name="base_link" />
+  <link name="camera_link" />
+
+  <joint name="base_link_to_camera_link" type="fixed">
+    <parent link="base_link" />
+    <child link="camera_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+
+  <!-- 如果相机驱动已经发布光学坐标系，这一段可以省略。 -->
+  <link name="camera_optical_frame" />
+  <joint name="camera_link_to_optical_frame" type="fixed">
+    <parent link="camera_link" />
+    <child link="camera_optical_frame" />
+    <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679" />
+  </joint>
+</robot>
+```
+
+- 仅做连通性测试时，零位姿就足够验证 TF 查找是否正常。
+- 真正要解释运动方向时，请把 `origin` 改成真实的相机安装外参。
+
 ### 轨迹文件
 
 数据集回放结束后，会把 `CameraTrajectory.txt` 和 `KeyFrameTrajectory.txt` 保存到 `dataset_root`；如果只提供了 `association_file`，则保存到该文件所在目录。
