@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<robot name="orbslam3_dataset_camera_test">
+  <!--
+    Minimal TF chain for dataset-mode body-frame testing.
+
+    Use with:
+      - robot_state_publisher
+      - orbslam3_ros in dataset mode
+
+    This file provides the base_link -> camera_link mount plus the optical
+    frame so dataset playback can be expressed in a ROS body frame.
+  -->
+
+  <link name="base_link" />
+  <link name="camera_link" />
+  <link name="camera_optical_frame" />
+
+  <joint name="base_link_to_camera_link" type="fixed">
+    <parent link="base_link" />
+    <child link="camera_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+
+  <joint name="camera_link_to_camera_optical_frame" type="fixed">
+    <parent link="camera_link" />
+    <child link="camera_optical_frame" />
+    <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679" />
+  </joint>
+</robot>

@@ -245,6 +245,11 @@ install(DIRECTORY launch/
   PATTERN ".gitkeep" EXCLUDE
 )
 
+install(DIRECTORY urdf/
+  DESTINATION share/${PROJECT_NAME}/urdf
+  PATTERN ".gitkeep" EXCLUDE
+)
+
 # -----------------------------------------------------------------------------
 # 7. Future layout suggestions
 #    - include/orbslam3_ros/      public headers

@@ -304,6 +304,8 @@ ros2 launch orbslam3_ros orbslam3_rgbd.launch.py
 
 用于连接测试的最小 URDF：
 
+可直接使用的文件：[urdf/minimal_camera_test.urdf](urdf/minimal_camera_test.urdf)
+
 ```xml
 <robot name="orbslam3_camera_test">
   <link name="base_link" />
@@ -326,7 +328,24 @@ ros2 launch orbslam3_ros orbslam3_rgbd.launch.py
 ```
 
 - 仅做连通性测试时，零位姿就足够验证 TF 查找是否正常。
+- 对 Astra 这套相机，建议把 optical 坐标系留给相机驱动，并将 `camera_frame:=camera_color_optical_frame`。
 - 真正要解释运动方向时，请把 `origin` 改成真实的相机安装外参。
+
+推荐的一键测试启动方式：
+
+```bash
+ros2 launch orbslam3_ros orbslam3_astra_test.launch.py
+```
+
+这个 launch 会同时启动 `robot_state_publisher`、`astra_camera` 和 `orbslam3_ros`。默认使用 `camera_name:=camera`，并读取 `urdf/minimal_camera_test.urdf`。
+
+如果你要让 dataset 回放也统一成 `base_link` 的 x 前 body frame，请用：
+
+```bash
+ros2 launch orbslam3_ros orbslam3_dataset_bodyframe.launch.py
+```
+
+它会读取 `urdf/minimal_dataset_camera_test.urdf`，把 dataset 输出也对齐到 `base_link` 的 x 轴。
 
 ### 轨迹文件
 
@@ -438,10 +457,15 @@ orbslam3_ros/
 │       ├── spsc_ring_buffer.hpp
 │       └── tum_dataset_loader.hpp
 ├── launch/
+│   ├── orbslam3_astra_test.launch.py
+│   ├── orbslam3_dataset_bodyframe.launch.py
 │   ├── orbslam3.launch.py
 │   ├── orbslam3_dataset.launch.py
 │   ├── orbslam3_realtime.launch.py
 │   └── orbslam3_rgbd.launch.py
+├── urdf/
+│   ├── minimal_dataset_camera_test.urdf
+│   └── minimal_camera_test.urdf
 ├── src/
 │   ├── dataset/
 │   │   └── tum_dataset_loader.cpp

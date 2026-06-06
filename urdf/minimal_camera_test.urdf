@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<robot name="orbslam3_camera_test">
+  <!--
+    Minimal TF chain for ORB-SLAM3 pose-alignment testing.
+
+    Use with:
+      - robot_state_publisher
+      - Astra camera driver publishing its own optical frame chain
+      - orbslam3_ros base_frame:=base_link
+      - orbslam3_ros camera_frame:=camera_color_optical_frame
+
+    This file only provides the robot body mount. Let the camera driver
+    publish the camera optical frames to avoid TF duplication.
+  -->
+
+  <link name="base_link" />
+  <link name="camera_link" />
+
+  <joint name="base_link_to_camera_link" type="fixed">
+    <parent link="base_link" />
+    <child link="camera_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+</robot>

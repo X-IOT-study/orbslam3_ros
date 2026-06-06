@@ -400,6 +400,12 @@ def launch_setup(context, *args, **kwargs):
             "loop": LaunchConfiguration("loop"),
             "playback_rate": LaunchConfiguration("playback_rate"),
             "map_points_rate": LaunchConfiguration("map_points_rate"),
+            "publish_tf": LaunchConfiguration("publish_tf"),
+            "publish_static_camera_tf": LaunchConfiguration("publish_static_camera_tf"),
+            "publish_static_optical_tf": LaunchConfiguration("publish_static_optical_tf"),
+            "base_frame": LaunchConfiguration("base_frame"),
+            "camera_frame": LaunchConfiguration("camera_frame"),
+            "camera_optical_frame": LaunchConfiguration("camera_optical_frame"),
         }.items(),
     )
 
@@ -447,6 +453,12 @@ def generate_launch_description():
             DeclareLaunchArgument("loop", default_value="false"),
             DeclareLaunchArgument("playback_rate", default_value="1.0"),
             DeclareLaunchArgument("map_points_rate", default_value="30.0"),
+            DeclareLaunchArgument("publish_tf", default_value="true"),
+            DeclareLaunchArgument("publish_static_camera_tf", default_value="false"),
+            DeclareLaunchArgument("publish_static_optical_tf", default_value="false"),
+            DeclareLaunchArgument("base_frame", default_value="base_link"),
+            DeclareLaunchArgument("camera_frame", default_value="camera_link"),
+            DeclareLaunchArgument("camera_optical_frame", default_value="camera_optical_frame"),
             OpaqueFunction(function=launch_setup),
         ]
     )

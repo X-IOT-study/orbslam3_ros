@@ -304,6 +304,8 @@ ros2 launch orbslam3_ros orbslam3_rgbd.launch.py
 
 Minimal URDF for a connection test:
 
+Ready-to-use file: [urdf/minimal_camera_test.urdf](urdf/minimal_camera_test.urdf)
+
 ```xml
 <robot name="orbslam3_camera_test">
   <link name="base_link" />
@@ -326,7 +328,24 @@ Minimal URDF for a connection test:
 ```
 
 - For a pure connection test, the zero transform is enough to verify that TF lookup works.
+- For the Astra setup, keep the camera optical frames in the camera driver and set `camera_frame:=camera_color_optical_frame`.
 - For real motion interpretation, replace the zero origin with the real camera mounting extrinsic.
+
+Recommended one-shot test launch:
+
+```bash
+ros2 launch orbslam3_ros orbslam3_astra_test.launch.py
+```
+
+This launch starts `robot_state_publisher`, `astra_camera`, and `orbslam3_ros` together. The defaults assume `camera_name:=camera` and use `urdf/minimal_camera_test.urdf`.
+
+For dataset playback in a body frame, use:
+
+```bash
+ros2 launch orbslam3_ros orbslam3_dataset_bodyframe.launch.py
+```
+
+That launch uses `urdf/minimal_dataset_camera_test.urdf` and keeps the output aligned to `base_link` x-forward.
 
 ### Trajectory Files
 
@@ -438,10 +457,15 @@ orbslam3_ros/
 │       ├── spsc_ring_buffer.hpp
 │       └── tum_dataset_loader.hpp
 ├── launch/
+│   ├── orbslam3_astra_test.launch.py
+│   ├── orbslam3_dataset_bodyframe.launch.py
 │   ├── orbslam3.launch.py
 │   ├── orbslam3_dataset.launch.py
 │   ├── orbslam3_realtime.launch.py
 │   └── orbslam3_rgbd.launch.py
+├── urdf/
+│   ├── minimal_dataset_camera_test.urdf
+│   └── minimal_camera_test.urdf
 ├── src/
 │   ├── dataset/
 │   │   └── tum_dataset_loader.cpp
