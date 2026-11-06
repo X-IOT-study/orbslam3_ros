@@ -111,13 +111,11 @@ find_library(ORB_SLAM3_G2O_LIBRARY
   NO_DEFAULT_PATH
 )
 
-set(ORB_SLAM3_REALSENSE2_LIBRARY
-  "/opt/ros/humble/lib/x86_64-linux-gnu/librealsense2.so.2.57"
-  CACHE FILEPATH "realsense2 shared library"
+find_library(ORB_SLAM3_REALSENSE2_LIBRARY
+  NAMES realsense2
+  PATHS "/opt/ros/humble/lib/x86_64-linux-gnu"
+  REQUIRED
 )
-if(NOT EXISTS "${ORB_SLAM3_REALSENSE2_LIBRARY}")
-  message(FATAL_ERROR "realsense2 library not found: ${ORB_SLAM3_REALSENSE2_LIBRARY}")
-endif()
 
 find_library(ORB_SLAM3_CRYPTO_LIBRARY
   NAMES crypto
