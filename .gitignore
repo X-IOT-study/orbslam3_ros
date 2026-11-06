@@ -24,6 +24,7 @@ __pycache__/
 /CameraTrajectory.txt
 /KeyFrameTrajectory.txt
 /image.png
+/paper_drafts/
 
 # Launch cache
 /launch/__pycache__/
